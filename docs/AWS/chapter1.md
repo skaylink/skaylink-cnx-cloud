@@ -50,7 +50,8 @@ Create a new IAM Policy and name it "EKSFullAccess"
                 "iam:CreateOpenIDConnectProvider",
                 "iam:DeleteOpenIDConnectProvider",
                 "iam:TagOpenIDConnectProvider",
-                "iam:GetRolePolicy"
+                "iam:GetRolePolicy",
+                "iam:CreatePolicy"
                 "cloudformation:*",
                 "eks:*"
             ],
