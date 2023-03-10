@@ -7,7 +7,7 @@ The subnets should be in one in each availability zone and have at least 128 fre
 
 Make sure you tagged your subnets properly to have the load balancer created properly. [Tag the Amazon VPC subnets](https://aws.amazon.com/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/)
 
-![AWS VPC Setup](../images/AWS_VPC_Setup.png "AWS VPC Setup")
+
 ## 1.2 IAM Roles and Policies
 
 Create an IAM Policy to allow your EKS Management Host access to manage the required resources on your behalf.  
