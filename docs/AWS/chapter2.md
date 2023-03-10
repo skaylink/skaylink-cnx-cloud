@@ -8,22 +8,22 @@ This chapter follows the documentation from AWS [Getting Started with Amazon EKS
 
 As some variables like your EKS Name is required more often, create a file with these variables:  
 The file is called `installsettings.sh` and is placed in your home directory.  
-Most of the scripts and commands reference this file.
+Most of the scripts and commands reference to this file.
 
 
 ```
 # Write our environment settings
 cat > ~/installsettings.sh <<EOF
 # Global
-installversion=70
+installversion=80
 
 # Network
 GlobalIngressPublic=1
 
 # EKS settings
 EKSName="cluster name e.g. cnx_test_eks" 
-EKSVersion=1.19
-EKSNodeType=t3a.xlarge
+EKSVersion=1.25
+EKSNodeType=t3a.large
 ## Depending on your installation
 ## Generic Worker: 2; Generic Worker + ES: 4
 EKSNodeCount=2
@@ -40,7 +40,7 @@ AWSRegion="Your AWS Region e.g. eu-west-1"
 SUBNETID=<List of Subnet IDs e.g.: subnet-a9189fe2,subnet-50432629>
 # Set this to 1 in case you want to use the EKS auto scaling feature.
 # If you enable this, choose a small worker node type
-EKSAutoscale=0
+EKSAutoscale=1
 
 # Route53
 HostedZoneId="HostedZoneId"
@@ -51,11 +51,16 @@ storageclass=aws-efs
 
 # ES settings
 useStandaloneES=1
+ESVersion=131
 standaloneESHost=<Hostname of your ES Server end-point>
 standaloneESPort=443
 
 # ECR settings
 ECRRegistry="your docker registry"
+HCLRegisttry=hclcr.io
+HCLHelmRegistry=https://hclcr.io/chartrepo/cnx
+HCLUser="<Your Harbor username>"
+HCLAccessKey="<Your Harbor access key>"
 
 # Certificate related settings
 acme_email="your enterprise email"
@@ -119,7 +124,7 @@ EOF
 For all options and probably adoptions in your environment see the `eksctl help` and the project [eksctl on GitHub](https://github.com/weaveworks/eksctl).
 
 ```
-bash beas-cnx-cloud/AWS/scripts/create_eks_cluster.sh
+bash skaylink-cnx-cloud/AWS/scripts/create_eks_cluster.sh
 
 ```
 
@@ -131,42 +136,34 @@ kubectl get svc
 
 ```
 
-**In case you want to use Autoscaler for your EKS cluster, follow the [Cluster Autoscaler](https://docs.aws.amazon.com/de_de/eks/latest/userguide/cluster-autoscaler.html) instructions.**
+To use the autoscaler and / or EFS auto-provisioning feature, you need to add the OIDC provider to your cluster.
 
-## 2.3 Configure Helm on your EKS environment (for Helm v2.x only)
- 
-**Create a kubernetes service account Helm v2.x only**
-
-As we have rbac enabled on our cluster, we need to create an service account so that helm can act on our cluster.
-
-The given instructions are based on [Role-based Access Control](https://helm.sh/docs/topics/rbac/).
-
-To create the service account, allow helm to manage the whole cluster and configure helm to use it, run this commands:
-
+To do so, run:
 ```
-# Create rbac configuration for helm
-kubectl apply -f beas-cnx-cloud/Azure/helm/rbac-config.yaml
+# Load your variables
+. ./installsettings.sh
 
-# Initialize helm and deploy server side tiller component
-helm init --service-account tiller
+# Add the OIDC provider to your cluster
+eksctl utils associate-iam-oidc-provider --cluster $EKSName --region $AWSRegion --approve
 
 ```
 
-To check your helm installation and your successful connection to the cluster run `helm version`.
+### Autoscaler
 
-## 2.4 Taint and Label your Nodes
+**In case you want to use Autoscaler for your EKS cluster, you can follow the [Cluster Autoscaler](https://docs.aws.amazon.com/de_de/eks/latest/userguide/cluster-autoscaler.html) instructions.**
 
-AWS EKS does not support different node groups yet but you can separate the existing nodes as described by HCL.
+As alternative, here is a script with the condenst instructions:
 
-I found this step not necessary. It makes your configuration more complicate. It is safe to skip this step in a test environment.  
-In case you skp this step, make sure that you set the node affinity to false when you deploy the component pack.
+```
+bash skaylink-cnx-cloud/AWS/scripts/deploy_eks_autoscaler.sh
 
-Taint and label the infrastructure worker nodes as described in [Labeling and tainting worker nodes for Elasticsearch](https://help.hcltechsw.com/connections/v65/admin/install/cp_prereqs_label_es_workers.html).
+```
 
+## 2.3 Create a AWS EFS Storage and Storage Class
 
-## 2.5 Create a AWS EFS Storage and Storage Class
+Make sure, you added the OIDC provider to your cluster successfully during the previous step.
 
-### 2.5.1 Create the EFS Storage
+### 2.3.1 Create the EFS Storage
 
 Create your EFS Storage by following the AWS documentation [Step 2: Create Your Amazon EFS File System](https://docs.aws.amazon.com/efs/latest/ug/gs-step-two-create-efs-resources.html).
 
@@ -176,44 +173,11 @@ Create your EFS Storage by following the AWS documentation [Step 2: Create Your 
 
 The security group is named `eksctl-<EKSName>-cluster-ClusterSharedNodeSecurityGroup-<Random String>`
 
-To use aws cli to create the EFS, use this commands:
+To use aws cli to create the EFS, use this script:
 
 ```
-. ~/installsettings.sh
-
-# get the security group name: 
-groupid=$(aws ec2 describe-security-groups \
-  --region=$AWSRegion \
-  --filter "Name=group-name,Values=eksctl-${EKSName}-cluster-ClusterSharedNodeSecurityGroup-*" \
-  --query "SecurityGroups[*].{Name:GroupId}" \
-  --output text)
-echo $groupid
-
-# Create EFS File System
-aws efs create-file-system \
-  --creation-token $EKSName \
-  --performance-mode generalPurpose \
-  --throughput-mode bursting \
-  --tags Key=Name,Value="$EKSName" \
-  --region $AWSRegion \
-  --encrypted
-
-# Get FSId
-efsid=$(aws efs describe-file-systems \
-  --creation-token $EKSName \
-  --query "FileSystems[*].FileSystemId" \
-  --region $AWSRegion \
-  --output text)
-echo $efsid
-
-# Create Mount Targets in every subnet
-for sid in $(echo $SUBNETID| tr ',' ' ')
-do aws efs create-mount-target \
---file-system-id $efsid \
---subnet-id  $sid \
---security-group $groupid \
---region $AWSRegion
-done
+# run command
+bash skaylink-cnx-cloud/AWS/scripts/create_efs.sh
 
 ```
 
@@ -221,41 +185,85 @@ done
 
 ### 2.5.2 Create the efs provisioner
 
-**The helm chart has been depricated but I have not yet found a suitable replacement.**
+The provisioner is using the [Amazon EFS CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html)
 
-Replace the file.system.id with your id and the aws.region by your region.  
-run the command:
-
-```
-. ~/installsettings.sh
-
-# File System ID:
-# get id from your AWS Console or used the variable that was set during EFS creation above.
-fsid=$efsid
-
-
-# Use the official helm chart to install:
-# !!! command differs on helm version
-
-# Helm v2
-helm install stable/efs-provisioner --name efs-provisioner \
-  --set efsProvisioner.efsFileSystemId=$fsid \
-  --set efsProvisioner.awsRegion=$AWSRegion \
-  --set efsProvisioner.storageClass.name=$storageclass
-
-# Helm v3
-helm install efs-provisioner stable/efs-provisioner \
-  --set efsProvisioner.efsFileSystemId=$fsid \
-  --set efsProvisioner.awsRegion=$AWSRegion \
-  --set efsProvisioner.storageClass.name=$storageclass
+Run this scripts to create an IAM policy and role:
 
 ```
+# Load configuration
+. ./installsettings.sh
 
-To check that your efs provisioner is deployed and running run `kubectl get pods`.
+# download manifest
+curl -O https://raw.githubusercontent.com/kubernetes-sigs/aws-efs-csi-driver/master/docs/iam-policy-example.json
 
-In case the container is not up and running after 2 minutes, check what went wrong by `kubectl describe pods -l app=efs-provisioner`.
+# Create the policy
+aws iam create-policy \
+    --policy-name AmazonEKS_EFS_CSI_Driver_Policy \
+    --policy-document file://iam-policy-example.json
 
-To restart the efs provisioner, delete the pod to get it recreated immediately. `kubectl delete pods -l app=efs-provisioner`
+# Get ARN of policy 
+ARN=$(aws iam list-policies --query "Policies[?PolicyName=='AmazonEKS_EFS_CSI_Driver_Policy'].Arn" --output text)
+
+# Create the serviceaccount
+eksctl create iamserviceaccount \
+    --cluster $EKSName \
+    --namespace kube-system \
+    --name efs-csi-controller-sa \
+    --attach-policy-arn $ARN \
+    --approve \
+    --region $AWSRegion
+
+```
+After the service account was created successfully, the provisioner can be deployed using helm.
+
+The script below uses the most common account id. In case the helm upgrade command fails check the [Amazon container image registries](https://docs.aws.amazon.com/eks/latest/userguide/add-ons-images.html) for the correct registry.
+
+```
+# check if this is correct
+AWS_REGISTRY="602401143452.dkr.ecr.$AWSRegion.amazonaws.com"
+
+# Add helm repo
+helm repo add aws-efs-csi-driver https://kubernetes-sigs.github.io/aws-efs-csi-driver/
+helm repo update
+
+
+helm upgrade -i aws-efs-csi-driver aws-efs-csi-driver/aws-efs-csi-driver \
+    --namespace kube-system \
+    --set image.repository=$AWS_REGISTRY/eks/aws-efs-csi-driver \
+    --set controller.serviceAccount.create=false \
+    --set controller.serviceAccount.name=efs-csi-controller-sa    
+```
+
+To check that your efs provisioner is deployed and running run `kubectl get pod -n kube-system -l "app.kubernetes.io/name=aws-efs-csi-driver,app.kubernetes.io/instance=aws-efs-csi-driver"`.
+
+In case the container is not up and running after 2 minutes, check what went wrong by `kubectl describe pods -n kube-system -l "app.kubernetes.io/name=aws-efs-csi-driver,app.kubernetes.io/instance=aws-efs-csi-driver"`.
+
+To restart the efs provisioner, delete the pod to get it recreated immediately. `kubectl  delete pods -n kube-system -l "app.kubernetes.io/name=aws-efs-csi-driver,app.kubernetes.io/instance=aws-efs-csi-driver"`
+
+### 2.5.3 Create storage class 
+
+Create the storage class using the EFS from above.
+
+```
+# Query filesystem id
+fsid=$(aws efs describe-file-systems --query "FileSystems[?Name=='$EKSName'].FileSystemId" --output text)
+echo Filesystem ID: $fsid
+
+# Crate the storageclass
+cat << EOF | kubectl apply -f -
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: $storageclass
+provisioner: efs.csi.aws.com
+parameters:
+  provisioningMode: efs-ap
+  fileSystemId: $fsid
+  directoryPerms: "700"
+  gidRangeStart: "1000" # optional
+  gidRangeEnd: "2000" # optional
+EOF
+```
 
 
 **[Create your AWS environment << ](chapter1.html) [ >> Prepare cluster](chapter3.html)**
