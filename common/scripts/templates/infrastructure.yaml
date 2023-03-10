@@ -1,0 +1,53 @@
+global:
+  onPrem: true
+  image:
+    repository: $HCLRegistry
+haproxy:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+redis:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+redis-sentinel:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+mongodb:
+  namespace: $namespace
+  createSecret: false
+  replicaCount: $rCountNormal
+mongo5:
+  clusterDomain: $clusterDomain
+  namespace: $namespace
+  createSecret: false
+  replicaCount: $rCountNormal
+appregistry-client:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+  ingress:
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/rewrite-target: /\$1
+    enabled: true
+    hosts:
+	  - host: \"*.$GlobalDomainName\"
+	    paths: []
+    name: cnx-ingress-appreg
+    tls: []
+appregistry-service:
+  namespace: $namespace
+  deploymentType: hybrid_cloud
+  replicaCount: $rCountNormal
+middleware-jsonapi:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+  ingress:
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/rewrite-target: /
+    enabled: true
+    hosts:
+    - host: \"*.$GlobalDomainName\"
+	    paths: []
+    name: cnx-ingress-jsonapi
+    tls: []
+replicaCount: $rCountNormal

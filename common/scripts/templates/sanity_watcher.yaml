@@ -1,0 +1,11 @@
+#Component Pack configuration - sanity watcher
+
+#sanity-watcher
+namespace: $namespace
+
+image:
+  repository: ${ECRRegistry}/connections
+
+#sanity-watcher
+replicaCount: 1
+

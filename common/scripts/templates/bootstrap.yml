@@ -1,0 +1,13 @@
+#bootstrap
+env:
+  set_ic_admin_user: \"$ic_admin_user\"
+  set_ic_admin_password: \"$ic_admin_password\"
+  set_ic_internal: \"$ic_internal\"
+  set_master_ip: \"$master_ip\"
+  set_starter_stack_list: \"$stack_list\"
+  skip_configure_redis: true
+$set_redis_secret
+image:
+  repository: ${ECRRegistry}/connections
+namespace: $namespace
+

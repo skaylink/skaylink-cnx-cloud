@@ -1,0 +1,20 @@
+#Global Ingress configuration
+
+controller:
+  replicaCount: $rCountNormal
+  ingressClass: global-nginx
+  config:
+    proxy-body-size: \"512m\"
+  service:
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+      service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: \"590\"
+      $serviceTags
+      $annotationPrivate
+  metrics:
+    enabled: true
+    service:
+      annotations:
+        prometheus.io/port: \"10254\"
+        prometheus.io/scrape: \"true\"
+

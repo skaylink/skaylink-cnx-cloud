@@ -1,0 +1,19 @@
+#Persistent Disks
+storageClassName: $storageclass
+mongo:
+  enabled: $MONGO 
+mongo5:
+  enabled: $MONGO5
+solr:
+  enabled: $SolrPVC 
+zk:
+  enabled: $SolrPVC
+es:
+  enabled: $ESPVC
+es7:
+  enabled: $ESPVC7
+opensearch:
+  enabled: $OSPVC
+customizer:
+  enabled: true
+

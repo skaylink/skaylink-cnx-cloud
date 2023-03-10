@@ -1,0 +1,31 @@
+onPrem: true
+ic:
+  host: $ic_front_door
+  internal: $ic_internal
+  interserviceOpengraphPort: 443
+  interserviceConnectionsPort: 443
+  interserviceScheme: https
+integrations:
+  msgraph:
+    client:
+      id: '$MSGraph_Client_ID'
+      secret: '$MSGraph_Client_Secret'
+    redirect:
+      uri: '$MSGraph_Redirect_URI'
+    secret:
+      name: '$MSGraph_Secret_Name'
+  msteams:
+    auth:
+      schema: '$MSTeams_Auth_Schema'
+    client:
+      id: '$MSTeams_Client_ID'
+      secret: '$MSTeams_Client_Secret'
+    enabled: $MSTeamsEnabled
+    redirect:
+      uri: '$MSTeams_Redirect_URI'
+    tenant:
+      id: '$MSTeams_Tenant_ID'
+
+createSecret: false
+replicaCount: $rCountNormal
+namespace: $namespace

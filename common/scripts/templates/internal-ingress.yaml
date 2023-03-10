@@ -1,0 +1,23 @@
+#Internal Ingress configuration
+
+controller:
+  replicaCount: $rCountNormal
+  ingressClass: nginx
+  config:
+  service:
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+      service.beta.kubernetes.io/aws-load-balancer-internal: \"true\"
+      $serviceTags
+    enableHttps: false
+  metrics:
+    enabled: true
+    service:
+      annotations:
+        prometheus.io/port: \"10254\"
+        prometheus.io/scrape: \"true\"
+# to forward tcp traffic throuh nginx proxy (for global not necessary anmore)
+tcp:
+  \"30379\": $namespace/haproxy-redis:6379
+$forwardES
+

@@ -1,0 +1,282 @@
+#Component Pack configuration
+
+#persistent disks & bootstrape & connections-env & elasticsearch & ingress controller & mw-proxy & sanity
+namespace: $namespace
+
+#Persistent Disks
+storageClassName: $storageclass
+mongo:
+  enabled: $MONGO
+mongo5:
+  enabled: $MONGO5
+solr:
+  enabled: $SolrPVC
+zk:
+  enabled: $SolrPVC
+es:
+  enabled: $ESPVC
+es7:
+  enabled: $ESPVC7
+opensearch:
+  enabled: $OSPVC
+customizer:
+  enabled: true
+
+#bootstrap
+env:
+  set_ic_admin_user: \"$ic_admin_user\"
+  set_ic_admin_password: \"$ic_admin_password\"
+  set_ic_internal: \"$ic_internal\"
+  set_master_ip: \"$master_ip\"
+  set_starter_stack_list: \"$stack_list\"
+  skip_configure_redis: true
+$set_redis_secret
+image:
+  repository: ${ECRRegistry}/connections
+
+#connections-env
+ic:
+  host: $ic_front_door
+  internal: $ic_internal
+  interserviceOpengraphPort: 443
+  interserviceConnectionsPort: 443
+  interserviceScheme: https
+createSecret: false
+integrations:
+  msgraph:
+    auth:
+      endpoint: '$MSGraph_Auth_Endpoint'
+    authorize:
+      endpoint: '$MSGraph_Authorize_Endpoint'
+    client:
+      id: '$MSGraph_Client_ID'
+      secret: '$MSGraph_Client_Secret'
+    meta:
+      endpoint: '$MSGraph_Meta_Endpoint'
+    redirect:
+      uri: '$MSGraph_Redirect_URI'
+    secret:
+      name: '$MSGraph_Secret_Name'
+    token:
+      endpoint: '$MSGraph_Token_Endpoint'
+  msteams:
+    auth:
+      schema: '$MSTeams_Auth_Schema'
+    client:
+      id: '$MSTeams_Client_ID'
+      secret: '$MSTeams_Client_Secret'
+    enabled: $MSTeamsEnabled
+    redirect:
+      uri: '$MSTeams_Redirect_URI'
+    tenant:
+      id: '$MSTeams_Tenant_ID'
+    share:
+      service:
+        endpoint: '$MSTeams_Share_Service_Endpoint'
+      ui:
+        files:
+          api: '$MSTeams_Share_UI_Files_API'
+
+#elasticsearch
+nodeAffinityRequired: false
+deploymentType: hybrid_cloud
+
+client:
+  replicas: $rCountNormal
+
+data:
+  replicas: $rCountNormal
+
+master:
+  replicas: $rCountNormal
+
+#infrastructure
+haproxy:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+redis:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+redis-sentinel:
+  env:
+    numRedisServerReplicaCount: $rCountNormal
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+mongodb:
+  createSecret: false
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+appregistry-client:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+appregistry-service:
+  deploymentType: hybrid_cloud
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+#msteams
+teams-share-ui :
+  namespace: $namespace
+  maxReplicas: $maxCount
+  minReplicas: $minCount
+  replicaCount: $rCountNormal
+
+teams-share-service :
+  namespace: $namespace
+  maxReplicas: $maxCount
+  minReplicas: $minCount
+  replicaCount: $rCountNormal
+
+teams-tab-api :
+  namespace: $namespace
+  scaler:
+    maxReplicas: $maxCount
+    minReplicas: $minCount
+
+teams-tab-ui :
+  namespace: $namespace
+  scaler:
+    maxReplicas: $maxCount
+    minReplicas: $minCount
+
+
+#tailored-exp
+admin-portal :
+  namespace: $namespace
+  maxReplicas: $maxCount
+  minReplicas: $minCount
+  replicaCount: $rCountNormal
+
+te-creation-wizard :
+  namespace: $namespace
+  maxReplicas: $maxCount
+  minReplicas: $minCount
+  replicaCount: $rCountNormal
+
+community-template-service :
+  namespace: $namespace
+  maxReplicas: $maxCount
+  minReplicas: $minCount
+  replicaCount: 1
+
+#orientMe
+global:
+  onPrem: true
+  image:
+    repository: ${ECRRegistry}/connections
+
+itm-services:
+  service:
+    nodePort: 31100
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+orient-web-client:
+  service:
+    nodePort: 30001
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+orient-analysis-service:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+orient-indexing-service:
+  indexing:
+    solr: $SolrIndexing
+    elasticsearch: $ESIndexing
+  elasticsearch:
+    host: $ESHost
+    port: $ESPort
+  elasticsearch7:
+    host: $ESHost7
+    port: $ESPort7
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+solr-basic:
+  namespace: $namespace
+  replicaCount: $SolrRepCount
+
+zookeeper:
+  namespace: $namespace
+  replicaCount: $ZooRepCount
+
+middleware-graphql:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+userprefs-service:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+orient-retrieval-service:
+  retrieval:
+    elasticsearch: $ESRetrieval
+  elasticsearch:
+    host: $ESHost
+    port: $ESPort
+  elasticsearch7:
+    host: $ESHost7
+    port: $ESPort7
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+people-scoring:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+people-datamigration:
+  namespace: $namespace
+  replicaCount: 1 #default to 1
+
+people-relationship:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+mail-service:
+  service:
+    nodePort: 32721
+  namespace: $namespace
+  replicaCount: $rCountSmall # default to 1
+
+people-idmapping:
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+community-suggestions:
+  service:
+    nodePort: 32200
+  namespace: $namespace
+  replicaCount: $rCountNormal
+
+#ingress controller
+controller:
+  service:
+    enableHttps: false
+  ingressClass: nginx
+ingress:
+  hosts:
+    domain: ${GlobalDomainName}
+multiDomainEnabled: false
+setIngressOnly: $setIngress
+
+tcp:
+  \"30379\": $namespace/haproxy-redis:6379
+$forwardES
+
+#ingress controller & mw-proxy & sanity & sanity-watcher !!! overwrite by --set replicaCount='1'
+replicaCount: $rCountNormal
+
+#mw-proxy
+minReplicas: $minCount
+maxReplicas: $maxCount
+
+#sanity
+
+
