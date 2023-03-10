@@ -234,11 +234,14 @@ helm upgrade -i aws-efs-csi-driver aws-efs-csi-driver/aws-efs-csi-driver \
     --set controller.serviceAccount.name=efs-csi-controller-sa    
 ```
 
-To check that your efs provisioner is deployed and running run `kubectl get pod -n kube-system -l "app.kubernetes.io/name=aws-efs-csi-driver,app.kubernetes.io/instance=aws-efs-csi-driver"`.
+To check that your efs provisioner is deployed and running run  
+`kubectl get pod -n kube-system -l "app.kubernetes.io/name=aws-efs-csi-driver,app.kubernetes.io/instance=aws-efs-csi-driver"`.
 
-In case the container is not up and running after 2 minutes, check what went wrong by `kubectl describe pods -n kube-system -l "app.kubernetes.io/name=aws-efs-csi-driver,app.kubernetes.io/instance=aws-efs-csi-driver"`.
+In case the container is not up and running after 2 minutes, check what went wrong by  
+`kubectl describe pods -n kube-system -l "app.kubernetes.io/name=aws-efs-csi-driver,app.kubernetes.io/instance=aws-efs-csi-driver"`.
 
-To restart the efs provisioner, delete the pod to get it recreated immediately. `kubectl  delete pods -n kube-system -l "app.kubernetes.io/name=aws-efs-csi-driver,app.kubernetes.io/instance=aws-efs-csi-driver"`
+To restart the efs provisioner, delete the pod to get it recreated immediately.  
+`kubectl  delete pods -n kube-system -l "app.kubernetes.io/name=aws-efs-csi-driver,app.kubernetes.io/instance=aws-efs-csi-driver"`
 
 ### 2.5.3 Create storage class 
 

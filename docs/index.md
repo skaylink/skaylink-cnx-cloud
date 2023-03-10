@@ -8,14 +8,14 @@ In case there is interest, the documentation can be enhanced to document the ins
 This documentation provides information and installation guidelines to get HCL Connections Component Pack running on a managed Kubernetes service on one of the main cloud providers.
 
 This repository is a successor of the previous installation instructions for IBM Connections Component Pack 6 and HCL Connections Component Pack 7.
-The old repository can be found at https://becketalservices.github.io/beas-cnx-cloud/
+The old repository can be found at (https://becketalservices.github.io/beas-cnx-cloud/)
  
 Setup of Kubernetes Infrastructure
 ----------------------------------
 
 __Amazon Web Services AWS__  
 
-Instructions based on HCL Connections Component Pack Version 7.0.0.0, 6.5.0.1, 6.5.0.0  
+Instructions based on HCL Connections Component Pack Version 8.0  
 [Installation instructions for Amazon Web Services](AWS/index.md)  
 The installation uses AWS Services where ever possible.
 
