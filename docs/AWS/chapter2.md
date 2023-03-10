@@ -183,7 +183,7 @@ bash skaylink-cnx-cloud/AWS/scripts/create_efs.sh
 
 **After EFS creation, wait 2 minutes until DNS is up to date.**
 
-### 2.5.2 Create the efs provisioner
+### 2.3.2 Create the efs provisioner
 
 The provisioner is using the [Amazon EFS CSI driver](https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html)
 
@@ -243,7 +243,7 @@ In case the container is not up and running after 2 minutes, check what went wro
 To restart the efs provisioner, delete the pod to get it recreated immediately.  
 `kubectl  delete pods -n kube-system -l "app.kubernetes.io/name=aws-efs-csi-driver,app.kubernetes.io/instance=aws-efs-csi-driver"`
 
-### 2.5.3 Create storage class 
+### 2.3.3 Create storage class 
 
 Create the storage class using the EFS from above.
 

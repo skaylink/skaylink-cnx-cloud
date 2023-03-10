@@ -1,3 +1,5 @@
+#!/bin/bash
+
 . ./installsettings.sh
 
 POL_NAME=AmazonEKSClusterAutoscalerPolicy

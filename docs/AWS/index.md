@@ -9,3 +9,4 @@ components. Please use a payed account.
 1. [Create your AWS environment](chapter1.md)
 2. [Create Kubernetes infrastructure on AWS](chapter2.md)
 3. [Prepare cluster](chapter3.md)
+4. [Configure your Network](chapter4.md)
