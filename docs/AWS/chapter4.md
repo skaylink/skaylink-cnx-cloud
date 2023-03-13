@@ -38,43 +38,116 @@ After the restart, your old infrastructure should behave normal. If not, you nee
 
 The Customizer requires a reverse proxy in front of the whole infrastructure so that some specific HTTP URLs can be redirected to the Customizer for modification. HCL suggests to use a nginx server. As it is a common problem on kubernetes infrastructures to redirect HTTP(s) traffic to different backend services (internal servers and external endpoints) out of the box solutions exists that can be used.
 
-[Installing the AWS Load Balancer Controller add-on](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html)
+This chapter uses the nginx-ingress controller from [nginx-ingress](https://kubernetes.github.io/ingress-nginx/).  
 
+There are different possibilities on how to connect to a Kubernetes cluster. Usually this is done via a load balancer. The load balancer can be set up automatically by Kubernetes or manually. The load balancer ip can be either internal or a public ip address.
 
-To create the AWS Load Balancer Controller run this script:
+The infrastructure will contain 2 ingress controller. The global we are currently set up and the cnx-ingress-controller. All HCL and Kudos components assume that the cnx-ingress-controller is the default ingress controller. Therefore the new global-ingress-controller uses a different ingress-class called `global-nginx`. 
+
+To install the global ingress controller make sure you created the global-ingress.yaml file. 
+Depending on the setting "GlobalIngressPublic" the ingress controller will create a public or private load balancer.
+
 ```
-# Create AWS Load Balancer Controller
-bash skaylink-cnx-cloud/AWS/scripts/create_eks_lb_controller.sh
+# Load configuration
+. ~/installsettings.sh
+
+# Add Helm Repository
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+
+# Global Ingress Controller
+helm upgrade global-nginx ingress-nginx/ingress-nginx -i \
+  -f ~/cp_config/global-ingress.yaml \
+  --namespace $namespace \
+  --version 4.5.2
+
+# Check deployment
+kubectl -n $namespace rollout status deployment global-nginx-ingress-nginx-controller
+
+kubectl get deployment -n $namespace global-nginx-ingress-nginx-controller
+
 ```
 
-After you have installed the controller, you can check the necessary subnet tags using:
+
+# 4.3 Make sure your DNS resolution and service configuration is right
+
+The DNS resolution must be set correctly to allow users and services to access your ingress controller from everywhere. 
+Especially when using the automatic SSL Certificate generation configured in 4.5.1 Automatic SSL Certificate retrieval and renewal.
+
+The script detects the currently running services by name, get the configured load balances and then creates Route53 CNAME entries in the appropriate Zones. Private Load Balancer get registered in the private zone only. Public load balancer get registered in both zones. 
+
+To configure the DNS entry for your LB via script run:
+
 ```
-# check subnet tags
-bash skaylink-cnx-cloud/AWS/scripts/create_eks_lb_check.sh
+# Create CNAME entries for your Load Balancers
+bash skaylink-cnx-cloud/AWS/scripts/setupDNS4Ingress.sh
 
-# review the output.
 ```
 
-In case you want to test your installation, you can install the 2048 game form the page [Application Load Balancing auf Amazon EKS](https://docs.aws.amazon.com/de_de/eks/latest/userguide/alb-ingress.html).
- 
+# 4.4 Get SSL Certificate
 
-# 4.3 Get SSL Certificate
+To secure your traffic a SSL certificate is necessary. This certificate must be added to a kubernetes secret.
 
-The easiest way to retrieve to have a certificate for the application load balancer is to use the AWS Certificate Manager.
+## 4.4.1 Automatic SSL Certificate retrieval and renewal for nginx-ingress
+When using the ingress controller together with the [cert-manager](https://cert-manager.io/) , the necessary ssl certificates can be retrieved automatically. 
 
-Use the AWS Console to generate a certificate for you.
+**The SSL Certificate retrieval only works, when you are using a pulbic Load Balancer (The ingress controller is accessible via http (port 80) from the public internet and your productive DNS entry is already pointing to your load balancer.**
 
-Write down the ARN of the validated certificate. You need this information when you create your ingress resources.
+**Make sure that the internal and external DNS resolution works for your public DNS Name. The cert manager will check the dns name interally as well.**
 
-# 4.4 Create a target group for the WebSphere HTTP Server
+Setup the certificate manager is simple when your ingress controller has a public IP.  
 
-When using the AWS AKB ingress controller, the forward to external resources is handled a little bit different. The forward happens directly on the load balancer and is not routed through the cluster.
+```
+# Create namespace
+kubectl create namespace cert-manager
 
-To define the forward, a load balancer target group must be created manually using the AWS console or via script.
+# Add Jetstack Helm repository
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
 
-Currently no instructions are provided here. Hopefully this will change in the future.
+# Install the cert-manager Helm chart !! K8s v1.18 or newer, Helm v3.3 or newer !!
+helm install cert-manager jetstack/cert-manager \
+  --version v1.11.0 \
+  --namespace cert-manager \
+  --set rbac.create=true \
+  --set installCRDs=true
+  
+```
 
-Record the target group arn for the next step.
+to create the CA cluster issuer configuration update your installsettings.sh:  
+Required parameters:
+
+```
+# Let's Encrypt CA Issuer configuration
+acme_email=<valid email from your organization>
+use_lestencrypt_prod=[true, false]
+
+```
+
+and run:
+
+```
+# Create issuer
+bash skaylink-cnx-cloud/common/scripts/cert_issuer.sh
+
+# check issuer
+kubectl describe Issuer letsencrypt -n $namespace
+
+```
+
+## 4.4.2 Manual SSL Certificate creation for nginx-ingress
+If you want to use an other CA managed certificate or a self singed certificate create the secret manually.  
+For simplicity we use a self singed certificate in this documentation. Example: [TLS certificate termination](https://github.com/kubernetes/contrib/tree/master/ingress/controllers/nginx/examples/tls)
+
+```
+# Create a self signed certificate
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/tls.key -out /tmp/tls.crt
+
+# Store the certificate inside Kubenetes
+kubectl -n connections create secret tls tls-secret --key /tmp/tls.key --cert /tmp/tls.crt
+
+```
 
 
 # 4.5 Forward traffic through global ingress
@@ -88,19 +161,14 @@ To create the external service for your existing infrastructure run:
 . ~/installsettings.sh
 
 # Create external service cnx-backend
-kubectl -n $namespace create service externalname cnx-backend \
+kubectl -n connections create service externalname cnx-backend \
   --external-name $ic_internal
 
-# Set the ARN of your Certificate
-CERT_ARN=<certificate arn>
-
-# Set the ARN of your target group
-TG_ARN=<target group arn>
-
 # create ingress configuration to forward traffic
-bash skaylink-cnx-cloud/common/scripts/global_ingress.sh $CERT_ARN $TG_ARN
+bash skaylink-cnx-cloud/AWS/scripts/global_ingress.sh
 
 ```
+
 
 # 4.6 Test your forwarding
 

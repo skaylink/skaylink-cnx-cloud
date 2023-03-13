@@ -3,6 +3,8 @@
 controller:
   replicaCount: $rCountNormal
   ingressClass: global-nginx
+  ingressClassResource:
+    name: global-nginx
   config:
     proxy-body-size: \"512m\"
   service:
